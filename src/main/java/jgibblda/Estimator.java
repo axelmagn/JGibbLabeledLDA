@@ -93,8 +93,12 @@ public class Estimator
         int topic = trnModel.z[m].get(n);
         int w = trnModel.data.docs.get(m).words[n];
 
+        /*
         trnModel.nw[w][topic] -= 1;
         trnModel.nd[m][topic] -= 1;
+        */
+        trnModel.nd.setQuick(w, topic, trnModel.nd.getQuick(w, topic) - 1);
+        trnModel.nw.setQuick(m, topic, trnModel.nw.getQuick(m, topic) - 1);
         trnModel.nwsum[topic] -= 1;
         trnModel.ndsum[m] -= 1;
 
@@ -111,9 +115,14 @@ public class Estimator
         for (int k = 0; k < K_m; k++) {
             topic = labels == null ? k : labels[k];
 
+            /*
             p[k] = (trnModel.nd[m][topic] + trnModel.alpha) *
                 (trnModel.nw[w][topic] + trnModel.beta) /
                 (trnModel.nwsum[topic] + Vbeta);
+            */
+            p[k] = (trnModel.nd.getQuick(m, topic) + trnModel.alpha) *
+                    (trnModel.nw.getQuick(m, topic) + trnModel.beta) /
+                    (trnModel.nwsum[topic] + Vbeta);
         }
 
         // cumulate multinomial parameters
@@ -135,8 +144,12 @@ public class Estimator
         }
 
         // add newly estimated z_i to count variables
+        /*
         trnModel.nw[w][topic] += 1;
         trnModel.nd[m][topic] += 1;
+        */
+        trnModel.nw.setQuick(w, topic, trnModel.nw.getQuick(w, topic) + 1);
+        trnModel.nd.setQuick(m, topic, trnModel.nd.getQuick(m, topic) + 1);
         trnModel.nwsum[topic] += 1;
         trnModel.ndsum[m] += 1;
 
