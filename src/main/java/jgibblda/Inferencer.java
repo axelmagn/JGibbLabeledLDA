@@ -105,8 +105,12 @@ public class Inferencer
         int _w = newModel.data.docs.get(m).words[n];
         int w = newModel.data.lid2gid.get(_w);
 
+        /*
         newModel.nw[_w][topic] -= 1;
         newModel.nd[m][topic] -= 1;
+        */
+        trnModel.nw.setQuick(_w, topic, trnModel.nw.getQuick(_w, topic) - 1);
+        trnModel.nd.setQuick(m, topic, trnModel.nd.getQuick(m, topic) - 1);
         newModel.nwsum[topic] -= 1;
         newModel.ndsum[m] -= 1;
 
@@ -135,13 +139,19 @@ public class Inferencer
                 nw_k = nw_inf_m__w[topic];
                 nwsum_k = newModel.nwsum_inf[m][topic];
             } else {
-                nw_k = newModel.nw[_w][topic];
+                // nw_k = newModel.nw[_w][topic];
+                nw_k = newModel.nw.getQuick(_w, topic);
                 nwsum_k = newModel.nwsum[topic];
             }
 
+            /*
             p[k] = (newModel.nd[m][topic] + newModel.alpha) *
                 (trnModel.nw[w][topic] + nw_k + newModel.beta) /
                 (trnModel.nwsum[topic] + nwsum_k + Vbeta);
+            */
+            p[k] = (newModel.nd.getQuick(m, topic) + newModel.alpha) *
+                    (trnModel.nw.getQuick(w, topic) + nw_k + newModel.beta) /
+                    (trnModel.nwsum[topic] + nwsum_k + Vbeta);
         }
 
         // cumulate multinomial parameters
@@ -163,8 +173,12 @@ public class Inferencer
         }
 
         // add newly estimated z_i to count variables
+        /*
         newModel.nw[_w][topic] += 1;
         newModel.nd[m][topic] += 1;
+        */
+        trnModel.nw.setQuick(_w, topic, trnModel.nw.getQuick(_w, topic) + 1);
+        trnModel.nd.setQuick(m, topic, trnModel.nd.getQuick(m, topic) + 1);
         newModel.nwsum[topic] += 1;
         newModel.ndsum[m] += 1;
 

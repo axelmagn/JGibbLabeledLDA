@@ -97,8 +97,8 @@ public class Estimator
         trnModel.nw[w][topic] -= 1;
         trnModel.nd[m][topic] -= 1;
         */
-        trnModel.nd.setQuick(w, topic, trnModel.nd.getQuick(w, topic) - 1);
-        trnModel.nw.setQuick(m, topic, trnModel.nw.getQuick(m, topic) - 1);
+        trnModel.nw.setQuick(w, topic, trnModel.nw.getQuick(w, topic) - 1);
+        trnModel.nd.setQuick(m, topic, trnModel.nd.getQuick(m, topic) - 1);
         trnModel.nwsum[topic] -= 1;
         trnModel.ndsum[m] -= 1;
 
