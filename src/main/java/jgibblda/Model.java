@@ -42,10 +42,15 @@ import java.util.StringTokenizer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import cern.colt.function.tlong.LongFunction;
+import cern.colt.function.tlong.LongLongFunction;
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import cern.colt.matrix.tdouble.impl.DenseDoubleMatrix2D;
 import cern.colt.matrix.tint.IntMatrix2D;
 import cern.colt.matrix.tint.impl.SparseCCIntMatrix2D;
+import cern.colt.matrix.tint.impl.SparseRCIntMatrix2D;
+import cern.colt.matrix.tlong.LongMatrix2D;
+import cern.colt.matrix.tlong.impl.SparseRCLongMatrix2D;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
@@ -90,8 +95,10 @@ public class Model {
     public double[][] theta = null; // theta: document - topic distributions, size M x K
     public double[][] phi = null;   // phi: topic-word distributions, size K x V
     */
-    public DoubleMatrix2D theta = null; // theta: document - topic distributions, size M x K
-    public DoubleMatrix2D phi = null;   // phi: topic-word distributions, size K x V
+    // public DoubleMatrix2D theta = null; // theta: document - topic distributions, size M x K
+    // public DoubleMatrix2D phi = null;   // phi: topic-word distributions, size K x V
+    public LongMatrix2D thetaCount = null;
+    public LongMatrix2D phiCount = null;
 
     // Temp variables while sampling
     public TIntArrayList[] z = null; // topic assignments for words, size M x doc.size()
@@ -99,8 +106,8 @@ public class Model {
     protected int[][] nw = null;       // nw[i][j]: number of instances of word/term i assigned to topic j, size V x K
     protected int[][] nd = null;       // nd[i][j]: number of words in document i assigned to topic j, size M x K
     */
-    protected IntMatrix2D nw = null;       // nw[i][j]: number of instances of word/term i assigned to topic j, size V x K
-    protected IntMatrix2D nd = null;       // nd[i][j]: number of words in document i assigned to topic j, size M x K
+    protected LongMatrix2D nw = null;       // nw[i][j]: number of instances of word/term i assigned to topic j, size V x K
+    protected LongMatrix2D nd = null;       // nd[i][j]: number of words in document i assigned to topic j, size M x K
     protected int[] nwsum = null;      // nwsum[j]: total number of words assigned to topic j, size K
     protected int[] ndsum = null;      // ndsum[i]: total number of words in document i, size M
 
@@ -229,8 +236,10 @@ public class Model {
         theta = new double[M][K];		
         phi = new double[K][V];
         */
-        theta = new DenseDoubleMatrix2D(M, K);
-        phi = new DenseDoubleMatrix2D(K, V);
+        // theta = new DenseDoubleMatrix2D(M, K);
+        // phi = new DenseDoubleMatrix2D(K, V);
+        thetaCount = new SparseRCLongMatrix2D(M, K);
+        phiCount = new SparseRCLongMatrix2D(K, V);
 
         return true;
     }
@@ -278,7 +287,7 @@ public class Model {
     protected void initSS()
     {
         // nw = new int[V][K];
-        nw = new SparseCCIntMatrix2D(V, K);
+        nw = new SparseRCLongMatrix2D(V, K);
         /*
         for (int w = 0; w < V; w++){
             for (int k = 0; k < K; k++){
@@ -288,7 +297,7 @@ public class Model {
         */
 
         // nd = new int[M][K];
-        nd = new SparseCCIntMatrix2D(M, K);
+        nd = new SparseRCLongMatrix2D(M, K);
         /*
         for (int m = 0; m < M; m++){
             for (int k = 0; k < K; k++){
@@ -327,35 +336,52 @@ public class Model {
 
     public void updateTheta()
     {
+        thetaCount.assign(nd, new LongLongFunction() {
+            @Override
+            public long apply(long x, long y) {
+                return x + y;
+            }
+        });
+        /*
         double Kalpha = K * alpha;
         for (int m = 0; m < M; m++) {
             for (int k = 0; k < K; k++) {
+                thetaCount.setQuick(m, k, thetaCount.getQuick(m, k) + nd.getQuick(m, k));
+        */
+                /*
                 // if (numSamples > 1) theta[m][k] *= numSamples - 1; // convert from mean to sum
                 if (numSamples > 1) {
                     theta.setQuick(m, k, theta.getQuick(m, k) * (numSamples - 1)); // convert from mean to sum
-                }
-                /*
-                theta[m][k] += (nd[m][k] + alpha) / (ndsum[m] + Kalpha);
                 if (numSamples > 1) theta[m][k] /= numSamples; // convert from sum to mean
-                */
                 theta.setQuick(m, k, theta.getQuick(m, k) + (nd.getQuick(m, k) + alpha) / (ndsum[m] + Kalpha));
                 if (numSamples > 1) {
                     theta.setQuick(m, k, theta.getQuick(m, k) / numSamples);
                 }
+                */
+        /*
             }
         }
+        */
     }
 
     public void updatePhi()
     {
         double Vbeta = V * beta;
+        phiCount.assign(nw, new LongLongFunction() {
+            @Override
+            public long apply(long x, long y) {
+                return x + y;
+            }
+        });
         for (int k = 0; k < K; k++) {
             for (int w = 0; w < V; w++) {
+                phiCount.setQuick(k, w, phiCount.getQuick(k, w) + nw.getQuick(k, w));
                 /*
                 if (numSamples > 1) phi[k][w] *= numSamples - 1; // convert from mean to sum
                 phi[k][w] += (nw[w][k] + beta) / (nwsum[k] + Vbeta);
                 if (numSamples > 1) phi[k][w] /= numSamples; // convert from sum to mean
                 */
+                /*
                 if(numSamples > 1) {
                     phi.setQuick(k, w, phi.getQuick(k, w) * (numSamples - 1));
                 }
@@ -363,6 +389,7 @@ public class Model {
                 if(numSamples > 1) {
                     phi.setQuick(k, w, phi.getQuick(k, w) / numSamples);
                 }
+                */
             }
         }
     }
@@ -374,18 +401,20 @@ public class Model {
         for (int k = 0; k < K; k++) {
             for (int _w = 0; _w < V; _w++) {
                 if (data.lid2gid.containsKey(_w)) {
-                    int id = data.lid2gid.get(_w);
-
+                    phiCount.setQuick(k, _w, phiCount.getQuick(k, _w) + nw.getQuick(k, _w));
+                    // int id = data.lid2gid.get(_w);
                     /*
                     if (numSamples > 1) phi[k][_w] *= numSamples - 1; // convert from mean to sum
                     phi[k][_w] += (trnModel.nw[id][k] + nw[_w][k] + beta) / (trnModel.nwsum[k] + nwsum[k] + Vbeta);
                     if (numSamples > 1) phi[k][_w] /= numSamples; // convert from sum to mean
                     */
+                    /*
                     if(numSamples > 1) {
                         phi.setQuick(k, _w, phi.getQuick(k, _w) * (numSamples - 1));
                     }
                     phi.setQuick(k, _w, phi.getQuick(k, _w) + (trnModel.nw.getQuick(id, k) + nw.getQuick(_w, k) + beta) / (trnModel.nwsum[k] + nwsum[k] + Vbeta));
                     if(numSamples > 1) phi.setQuick(k, _w, phi.getQuick(k, _w) / numSamples);
+                    */
                 } // else ignore words that don't appear in training
             } //end foreach word
         } // end foreach topic
@@ -487,6 +516,8 @@ public class Model {
             return false;
         }
         return true;
+        
+        
     }
 
     /**
