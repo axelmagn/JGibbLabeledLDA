@@ -11,6 +11,10 @@
 apply plugin: 'java'
 apply plugin: 'application'
 
+version = '1.0'
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
 // In this section you declare where to find the dependencies of your project
 repositories {
     // Use 'jcenter' for resolving your dependencies.
@@ -24,6 +28,17 @@ jar {
     manifest {
         attributes 'Main-Class': 'jgibblda.LDA'
     }
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'JGibbLabeledLDA',  
+            'Implementation-Version': version,
+            'Main-Class': 'jgibblda.LDA'
+    }
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }
 
 // In this section you declare the dependencies for your production and test code
