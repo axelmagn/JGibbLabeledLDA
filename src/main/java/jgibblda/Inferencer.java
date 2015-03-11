@@ -134,7 +134,7 @@ public class Inferencer
         for (int k = 0; k < K_m; k++) {
             topic = labels == null ? k : labels[k];
 
-            int nw_k, nwsum_k;
+            long nw_k, nwsum_k;
             if (option.infSeparately) {
                 nw_k = nw_inf_m__w[topic];
                 nwsum_k = newModel.nwsum_inf[m][topic];

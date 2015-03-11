@@ -49,7 +49,9 @@ import cern.colt.matrix.tdouble.impl.DenseDoubleMatrix2D;
 import cern.colt.matrix.tint.IntMatrix2D;
 import cern.colt.matrix.tint.impl.SparseCCIntMatrix2D;
 import cern.colt.matrix.tint.impl.SparseRCIntMatrix2D;
+import cern.colt.matrix.tlong.LongMatrix1D;
 import cern.colt.matrix.tlong.LongMatrix2D;
+import cern.colt.matrix.tlong.impl.DenseLongMatrix1D;
 import cern.colt.matrix.tlong.impl.SparseRCLongMatrix2D;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.hash.TIntObjectHashMap;
@@ -66,6 +68,20 @@ public class Model {
     public static String othersSuffix  = ".others.gz"; 	 // suffix for containing other parameters
     public static String twordsSuffix  = ".twords.gz";	 // suffix for file containing words-per-topics
     public static String wordMapSuffix  = ".wordmap.gz"; // suffix for file containing word to id map
+    
+    public final static LongLongFunction lPlus = new LongLongFunction() {
+        @Override
+        public long apply(long x, long y) {
+            return x + y;
+        }
+    };
+    public final static LongFunction lIdent = new LongFunction() {
+        @Override
+        public long apply(long argument) {
+            return argument;
+        }
+    };
+            
 
     //---------------------------------------------------------------
     //	Model Parameters and Variables
@@ -98,7 +114,9 @@ public class Model {
     // public DoubleMatrix2D theta = null; // theta: document - topic distributions, size M x K
     // public DoubleMatrix2D phi = null;   // phi: topic-word distributions, size K x V
     public LongMatrix2D thetaCount = null;
+    // public LongMatrix1D thetaRowSum = null;
     public LongMatrix2D phiCount = null;
+    // public LongMatrix1D phiRowSum = null;
 
     // Temp variables while sampling
     public TIntArrayList[] z = null; // topic assignments for words, size M x doc.size()
@@ -239,7 +257,9 @@ public class Model {
         // theta = new DenseDoubleMatrix2D(M, K);
         // phi = new DenseDoubleMatrix2D(K, V);
         thetaCount = new SparseRCLongMatrix2D(M, K);
+        // thetaRowSum = new DenseLongMatrix1D(M);
         phiCount = new SparseRCLongMatrix2D(K, V);
+        // phiRowSum = new DenseLongMatrix1D(K);
 
         return true;
     }
@@ -336,6 +356,7 @@ public class Model {
 
     public void updateTheta()
     {
+        nd.trimToSize();
         thetaCount.assign(nd, new LongLongFunction() {
             @Override
             public long apply(long x, long y) {
@@ -366,6 +387,7 @@ public class Model {
 
     public void updatePhi()
     {
+        nw.trimToSize();
         double Vbeta = V * beta;
         phiCount.assign(nw, new LongLongFunction() {
             @Override
@@ -373,15 +395,13 @@ public class Model {
                 return x + y;
             }
         });
+        /*
         for (int k = 0; k < K; k++) {
             for (int w = 0; w < V; w++) {
                 phiCount.setQuick(k, w, phiCount.getQuick(k, w) + nw.getQuick(k, w));
-                /*
                 if (numSamples > 1) phi[k][w] *= numSamples - 1; // convert from mean to sum
                 phi[k][w] += (nw[w][k] + beta) / (nwsum[k] + Vbeta);
                 if (numSamples > 1) phi[k][w] /= numSamples; // convert from sum to mean
-                */
-                /*
                 if(numSamples > 1) {
                     phi.setQuick(k, w, phi.getQuick(k, w) * (numSamples - 1));
                 }
@@ -389,9 +409,9 @@ public class Model {
                 if(numSamples > 1) {
                     phi.setQuick(k, w, phi.getQuick(k, w) / numSamples);
                 }
-                */
             }
         }
+        */
     }
 
     // for inference
@@ -500,11 +520,27 @@ public class Model {
                         new GZIPOutputStream(
                             new FileOutputStream(filename)), "UTF-8"));
 
+            /*
             for (int i = 0; i < M; i++) {
                 for (int j = 0; j < K; j++) {
                     if (theta.getQuick(i, j) > 0) {
                         writer.write(j + ":" + theta.getQuick(i, j) + " ");
                     }
+                }
+                writer.write("\n");
+            }
+            writer.close();
+            */
+            for (int i = 0; i < M; i++) {
+                long thetaSum = thetaCount.viewRow(i).aggregate(lPlus, lIdent);
+                double thetaNorm = thetaSum + K * alpha;
+                for (int j = 0; j < K; j++) {
+                    writer.write(j + ":" + (thetaCount.getQuick(i, j) + alpha)/thetaNorm + " ");
+                    /*
+                    if (thetaCount.getQuick(i, j) > 0) {
+                        writer.write(j + ":" + theta.getQuick(i, j) + " ");
+                    }
+                    */
                 }
                 writer.write("\n");
             }
@@ -530,11 +566,22 @@ public class Model {
                         new GZIPOutputStream(
                             new FileOutputStream(filename)), "UTF-8"));
 
+            /*
             for (int i = 0; i < K; i++) {
                 for (int j = 0; j < V; j++) {
                     if (phi.getQuick(i,j) > 0) {
                         writer.write(j + ":" + phi.getQuick(i,j) + " ");
                     }
+                }
+                writer.write("\n");
+            }
+            writer.close();
+            */
+            for (int i = 0; i < K; i++) {
+                long phiSum = phiCount.viewRow(i).aggregate(lPlus, lIdent);
+                double phiNorm = phiSum + V * beta;
+                for (int j = 0; j < V; j++) {
+                    writer.write(j + ":" + (phiCount.getQuick(i,j)+beta)/phiNorm + " ");
                 }
                 writer.write("\n");
             }
@@ -589,9 +636,11 @@ public class Model {
 
             for (int k = 0; k < K; k++){
                 ArrayList<Pair> wordsProbsList = new ArrayList<Pair>(); 
+                double phiNorm = phiCount.viewRow(k).aggregate(lPlus, lIdent) + V * beta;
                 for (int w = 0; w < V; w++){
                     //Pair p = new Pair(w, phi[k][w], false);
-                    Pair p = new Pair(w, phi.getQuick(k, w), false);
+                    double phi = (phiCount.getQuick(k,w) + beta) / phiNorm;
+                    Pair p = new Pair(w, phi, false);
 
                     wordsProbsList.add(p);
                 }//end foreach word
