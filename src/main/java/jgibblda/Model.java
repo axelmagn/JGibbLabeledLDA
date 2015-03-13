@@ -242,8 +242,8 @@ public class Model {
                 nw[w][topic]++; // number of instances of word assigned to topic j
                 nd[m][topic]++; // number of words in document i assigned to topic j
                 */
-                nw.setQuick(w, topic, nw.getQuick(w, topic));
-                nd.setQuick(m, topic, nd.getQuick(m, topic));
+                nw.setQuick(w, topic, nw.getQuick(w, topic)+1);
+                nd.setQuick(m, topic, nd.getQuick(m, topic)+1);
                 nwsum[topic]++; // total number of words assigned to topic j
             }
 

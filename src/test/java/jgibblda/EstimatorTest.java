@@ -8,11 +8,11 @@ import org.junit.Test;
 public class EstimatorTest {
     public final static String[] estimatorArgs = {
             "-est",
-            "-niters", "2000",
-            "-nburnin", "500",
-            "-ntopics", "31662",
+            "-niters", "500",
+            "-nburnin", "200",
+            "-ntopics", "11",
             "-dir", "src/test/resources",
-            "-dfile", "sample_1E3.gz"
+            "-dfile", "random_1E3.gz"
     };
 
     @Test
