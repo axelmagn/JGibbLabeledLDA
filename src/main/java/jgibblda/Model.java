@@ -258,7 +258,8 @@ public class Model {
         // phi = new DenseDoubleMatrix2D(K, V);
         thetaCount = new SparseRCLongMatrix2D(M, K);
         // thetaRowSum = new DenseLongMatrix1D(M);
-        phiCount = new SparseRCLongMatrix2D(K, V);
+        // phiCount = new SparseRCLongMatrix2D(K, V);
+        phiCount = new SparseRCLongMatrix2D(V, K);
         // phiRowSum = new DenseLongMatrix1D(K);
 
         return true;
@@ -421,7 +422,7 @@ public class Model {
         for (int k = 0; k < K; k++) {
             for (int _w = 0; _w < V; _w++) {
                 if (data.lid2gid.containsKey(_w)) {
-                    phiCount.setQuick(k, _w, phiCount.getQuick(k, _w) + nw.getQuick(k, _w));
+                    phiCount.setQuick(_w,k,  phiCount.getQuick(_w, k) + nw.getQuick(k, _w));
                     // int id = data.lid2gid.get(_w);
                     /*
                     if (numSamples > 1) phi[k][_w] *= numSamples - 1; // convert from mean to sum
@@ -578,10 +579,10 @@ public class Model {
             writer.close();
             */
             for (int i = 0; i < K; i++) {
-                long phiSum = phiCount.viewRow(i).aggregate(lPlus, lIdent);
+                long phiSum = phiCount.viewColumn(i).aggregate(lPlus, lIdent);
                 double phiNorm = phiSum + V * beta;
                 for (int j = 0; j < V; j++) {
-                    writer.write(j + ":" + (phiCount.getQuick(i,j)+beta)/phiNorm + " ");
+                    writer.write(j + ":" + (phiCount.getQuick(j,i)+beta)/phiNorm + " ");
                 }
                 writer.write("\n");
             }
@@ -636,10 +637,10 @@ public class Model {
 
             for (int k = 0; k < K; k++){
                 ArrayList<Pair> wordsProbsList = new ArrayList<Pair>(); 
-                double phiNorm = phiCount.viewRow(k).aggregate(lPlus, lIdent) + V * beta;
+                double phiNorm = phiCount.viewColumn(k).aggregate(lPlus, lIdent) + V * beta;
                 for (int w = 0; w < V; w++){
                     //Pair p = new Pair(w, phi[k][w], false);
-                    double phi = (phiCount.getQuick(k,w) + beta) / phiNorm;
+                    double phi = (phiCount.getQuick(w,k) + beta) / phiNorm;
                     Pair p = new Pair(w, phi, false);
 
                     wordsProbsList.add(p);
