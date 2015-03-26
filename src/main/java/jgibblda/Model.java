@@ -533,7 +533,11 @@ public class Model {
             writer.close();
             */
             for (int i = 0; i < M; i++) {
-                long thetaSum = thetaCount.viewRow(i).aggregate(lPlus, lIdent);
+                LongMatrix1D trow = thetaCount.viewRow(i);
+                long thetaSum = 0;
+                for(int j = 0; j < trow.size(); j++) {
+                    thetaSum += trow.getQuick(j);
+                }
                 double thetaNorm = thetaSum + K * alpha;
                 for (int j = 0; j < K; j++) {
                     writer.write(j + ":" + (thetaCount.getQuick(i, j) + alpha)/thetaNorm + " ");
@@ -579,7 +583,11 @@ public class Model {
             writer.close();
             */
             for (int i = 0; i < K; i++) {
-                long phiSum = phiCount.viewColumn(i).aggregate(lPlus, lIdent);
+                LongMatrix1D prow = phiCount.viewRow(i);
+                long phiSum = 0;
+                for(int j = 0; j < prow.size(); j++) {
+                    phiSum += prow.getQuick(j);
+                }
                 double phiNorm = phiSum + V * beta;
                 for (int j = 0; j < V; j++) {
                     writer.write(j + ":" + (phiCount.getQuick(j,i)+beta)/phiNorm + " ");
