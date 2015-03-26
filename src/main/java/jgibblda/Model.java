@@ -644,8 +644,13 @@ public class Model {
             }
 
             for (int k = 0; k < K; k++){
-                ArrayList<Pair> wordsProbsList = new ArrayList<Pair>(); 
-                double phiNorm = phiCount.viewColumn(k).aggregate(lPlus, lIdent) + V * beta;
+                ArrayList<Pair> wordsProbsList = new ArrayList<Pair>();
+                LongMatrix1D prow = phiCount.viewRow(i);
+                long phiSum = 0;
+                for(int j = 0; j < prow.size(); j++) {
+                    phiSum += prow.getQuick(j);
+                }
+                double phiNorm = phiSum + V * beta;
                 for (int w = 0; w < V; w++){
                     //Pair p = new Pair(w, phi[k][w], false);
                     double phi = (phiCount.getQuick(w,k) + beta) / phiNorm;
