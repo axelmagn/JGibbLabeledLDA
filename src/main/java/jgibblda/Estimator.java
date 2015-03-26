@@ -36,6 +36,29 @@ public class Estimator
     // output model
     protected Model trnModel;
     LDACmdOption option;
+    
+    public static int NTHREADS = 16;
+    
+    protected static class EstimatorThread implements Runnable {
+        int min;
+        int max;
+        Estimator est;
+
+        public EstimatorThread(int min, int max, Estimator est) {
+            this.min = min;
+            this.max = max;
+            this.est = est;
+        }
+
+        @Override
+        public void run() {
+            for(int m = min; m < max; m++) {
+                for(int n = 0; n < est.getDocLen(m); n++) {
+                    est.sampleTopic(m, n);
+                }
+            }
+        }
+    }
 
     public Estimator(LDACmdOption option) throws FileNotFoundException, IOException
     {
@@ -50,14 +73,24 @@ public class Estimator
             trnModel.init(false);
         }
     }
+    
+    public int getDocLen(int m) {
+        return trnModel.data.docs.get(m).length;
+    }
+    
+    public void sampleTopic(int m, int n) {
+        int topic = sampling(m, n);
+        trnModel.z[m].set(n, topic);
+    }
 
-    public void estimate()
+    public void estimate() throws InterruptedException
     {
         System.out.println("Sampling " + trnModel.niters + " iterations!");
         System.out.print("Iteration");
         for (int startIter = ++trnModel.liter; trnModel.liter <= startIter - 1 + trnModel.niters; trnModel.liter++){
             System.out.format("%6d", trnModel.liter);
 
+            /*
             // for all z_i
             for (int m = 0; m < trnModel.M; m++){				
                 for (int n = 0; n < trnModel.data.docs.get(m).length; n++){
@@ -67,6 +100,20 @@ public class Estimator
                     trnModel.z[m].set(n, topic);
                 }// end for each word
             }// end for each document
+            */
+            
+            int interval = trnModel.M / NTHREADS; // no. of docs per thread
+            Thread[] pool = new Thread[NTHREADS];
+            for(int i = 0; i < NTHREADS; i++) {
+                int min = i * interval;
+                int max = Math.min((i+1) * interval, trnModel.M);
+                pool[i] = new Thread(new EstimatorThread(min, max, this));
+                pool[i].start();
+            }
+            
+            for(int i = 0; i < NTHREADS; i++) {
+                pool[i].join();
+            }
 
             if ((trnModel.liter == startIter - 1 + trnModel.niters) ||
                     (trnModel.liter > trnModel.nburnin && trnModel.liter % trnModel.samplingLag == 0)) {

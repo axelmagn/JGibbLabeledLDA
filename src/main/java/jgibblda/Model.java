@@ -466,9 +466,9 @@ public class Model {
             return false;
         }
 
-        //if (!saveModelPhi(dir + File.separator + modelPrefix + modelName + phiSuffix)) {
-        //    return false;
-        //}
+        if (!saveModelPhi(dir + File.separator + modelPrefix + modelName + phiSuffix)) {
+            return false;
+        }
 
         if (twords > 0) {
             if (!saveModelTwords(dir + File.separator + modelPrefix + modelName + twordsSuffix)) {
