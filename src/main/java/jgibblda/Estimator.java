@@ -90,7 +90,6 @@ public class Estimator
         for (int startIter = ++trnModel.liter; trnModel.liter <= startIter - 1 + trnModel.niters; trnModel.liter++){
             System.out.format("%6d", trnModel.liter);
 
-            /*
             // for all z_i
             for (int m = 0; m < trnModel.M; m++){				
                 for (int n = 0; n < trnModel.data.docs.get(m).length; n++){
@@ -100,8 +99,8 @@ public class Estimator
                     trnModel.z[m].set(n, topic);
                 }// end for each word
             }// end for each document
-            */
-            
+
+            /*
             int interval = trnModel.M / NTHREADS; // no. of docs per thread
             Thread[] pool = new Thread[NTHREADS];
             for(int i = 0; i < NTHREADS; i++) {
@@ -114,6 +113,7 @@ public class Estimator
             for(int i = 0; i < NTHREADS; i++) {
                 pool[i].join();
             }
+            */
 
             if ((trnModel.liter == startIter - 1 + trnModel.niters) ||
                     (trnModel.liter > trnModel.nburnin && trnModel.liter % trnModel.samplingLag == 0)) {
